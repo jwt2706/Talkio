@@ -1,4 +1,5 @@
 import 'react'
+import LiveWaveform from "./LiveWaveform";
 
 function App() {
 
@@ -9,7 +10,10 @@ function App() {
         <div className="p-6 bg-white rounded-xl shadow-md text-gray-800 text-lg font-medium">
           hello
         </div>
+      
+      <LiveWaveform />
       </div>
+      
     </>
   )
 }
