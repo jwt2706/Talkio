@@ -1,4 +1,5 @@
 import React from "react";
+import { playBeep } from "../utils/beep";
 
 /**
  * BigRedButton component
@@ -12,10 +13,12 @@ export default function TalkButton({ onPress, onRelease, className = "" }) {
 
   const handlePress = (e) => {
     setIsPressed(true);
+    playBeep(); // Beep on press
     if (onPress) onPress(e);
   };
   const handleRelease = (e) => {
     setIsPressed(false);
+    playBeep(); // Beep on release
     if (onRelease) onRelease(e);
   };
 
