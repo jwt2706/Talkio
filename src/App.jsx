@@ -2,6 +2,7 @@ import React from 'react';
 import LiveWaveform from "./components/LiveWaveform";
 import TalkButton from './components/TalkButton';
 import ExtendWindow from './components/ExtendWindow';
+import useFloorControl from './hooks/useFloorControl';
 
 const CHANNELS = [
   { id: "1", name: "Chanel 1"},
@@ -18,6 +19,7 @@ function App() {
   const [activeChannelId, setActiveChannelId] = React.useState(CHANNELS[0].id);
 
   const activeChannel = CHANNELS.find(c => c.id === activeChannelId);
+  const { status, requestMic, releaseMic } = useFloorControl(activeChannelId);
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-blue-100 to-purple-200 flex flex-col justify-end items-center">
@@ -43,9 +45,9 @@ function App() {
       </div>
       
       <div className="w-full flex flex-col items-center gap-6 pb-12">
-        <LiveWaveform running={waveformRunning} />
+        <LiveWaveform running={status === 'TALKING'} />
 
-        <TalkButton onPress={() => setWaveformRunning(true)} onRelease={() => setWaveformRunning(false)} />
+        <TalkButton status={status} onPress={requestMic} onRelease={releaseMic} />
       </div>
 
       {/* Extend Window */}
