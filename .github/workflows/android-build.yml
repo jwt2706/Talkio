@@ -29,9 +29,6 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Initialize Capacitor
-        run: npx cap init Talkio com.example.talkio --web-dir=dist --npm-client=npm --no-interactive
-
       - name: Add Android platform
         run: npx cap add android
 
