@@ -51,3 +51,11 @@ jobs:
         with:
           name: Talkio-android
           path: android/app/build/outputs/apk/debug/*.apk
+
+      - name: Upload APK to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/debug/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
