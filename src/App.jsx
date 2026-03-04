@@ -220,7 +220,7 @@ function App() {
       <ExtendWindow
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        channels={channels} // ✅ use state channels
+        channels={CHANNELS} // ✅ use state channels
         activeChannelId={activeChannelId}
         onSelectChannel={(id) => {
           setActiveChannelId(id);
