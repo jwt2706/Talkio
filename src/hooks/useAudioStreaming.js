@@ -13,7 +13,9 @@ export default function useAudioStreaming(mqttClient, activeChannelId, myAudioId
       
       // 2. Ép trình duyệt dùng bộ nén Opus để tiết kiệm băng thông tối đa
       // Đáp ứng tiêu chí Data Efficiency của Hackathon
-      const options = { mimeType: 'audio/webm;codecs=opus' };
+      const options = { mimeType: 'audio/webm;codecs=opus',
+        audioBitsPerSecond: 8000 // Giảm bitrate xuống mức thấp nhất có thể để tiết kiệm băng thông
+       };
       const recorder = new MediaRecorder(stream, options);
       
       mediaRecorderRef.current = recorder;
