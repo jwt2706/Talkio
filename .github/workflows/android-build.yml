@@ -30,10 +30,12 @@ jobs:
       - name: Copy web assets
         run: npx cap copy android
 
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
       - name: Build Android APK
-        run: |
-          cd android
-          ./gradlew assembleDebug
+        run: ./gradlew assembleDebug
+        working-directory: android
 
       - name: Get version from package.json
         id: get_version
