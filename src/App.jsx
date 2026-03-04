@@ -4,6 +4,7 @@ import LiveWaveform from "./components/LiveWaveform";
 import TalkButton from "./components/TalkButton";
 import ExtendWindow from "./components/ExtendWindow";
 import useFloorControl from "./hooks/useFloorControl";
+import LoginPage from "./components/LoginPage";
 
 const INITIAL_CHANNELS = [
   { id: "1", name: "Channel 1" },
@@ -22,7 +23,12 @@ function App() {
   const [activeChannelId, setActiveChannelId] = React.useState(
     INITIAL_CHANNELS[0].id
   );
-
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [currentUser, setCurrentUser] = React.useState(null);
+  const handleLogin = (user) => {
+  setCurrentUser(user);
+  setIsLoggedIn(true);
+};
   const [connectionStatus, setConnectionStatus] = React.useState("connecting"); // connecting | connected | error
   const [deviceStatus, setDeviceStatus] = React.useState(null);
   const [error, setError] = React.useState(null);
@@ -137,12 +143,12 @@ function App() {
         <LiveWaveform running={status === "TALKING"} />
         <TalkButton status={status} onPress={requestMic} onRelease={releaseMic} />
       </div>
-
+<LoginPage open={!isLoggedIn} onLogin={handleLogin} />
       {/* Extend Window */}
       <ExtendWindow
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        channels={channels} // ✅ use state channels
+        channels={channels} // use state channels
         activeChannelId={activeChannelId}
         onSelectChannel={(id) => {
           setActiveChannelId(id);
@@ -150,13 +156,14 @@ function App() {
           setWaveformRunning(false);
         }}
         onCreateChannel={(newChannel) => {
-          // ✅ add channel + switch to it
+          // add channel + switch to it
           setChannels((prev) => [...prev, newChannel]);
           setActiveChannelId(newChannel.id);
           setDrawerOpen(false);
         }}
       />
     </div>
+    
   );
 }
 
