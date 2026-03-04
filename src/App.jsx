@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react'; // Thêm useRef
 import api from './utils/api';
 import LiveWaveform from "./components/LiveWaveform";
 import TalkButton from './components/TalkButton';
@@ -13,85 +13,101 @@ const CHANNELS = [
   { id: "4", name: "Chanel 4"},
 ];
 
-
 function App() {
-  const [waveformRunning, setWaveformRunning] = React.useState(false);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [activeChannelId, setActiveChannelId] = React.useState(CHANNELS[0].id);
-  const [connectionStatus, setConnectionStatus] = React.useState('connecting'); // connecting | connected | error
+  const [connectionStatus, setConnectionStatus] = React.useState('connecting'); 
   const [deviceStatus, setDeviceStatus] = React.useState(null);
   const [error, setError] = React.useState(null);
 
+  // 1. Tạo Ref để móc vào thẻ audio vật lý trên giao diện
+  const audioPlayerRef = useRef(null);
+
   const activeChannel = CHANNELS.find(c => c.id === activeChannelId);
+  const myAudioId = React.useMemo(() => Math.floor(Math.random() * 256), []);
+  
   const { status, requestMic, releaseMic, client } = useFloorControl(activeChannelId);
-  const { startRecording, stopRecording } = useAudioStreaming(client, activeChannelId, 'my_device_id');
-  // 3. Lắng nghe trạng thái để bật/tắt thu âm tự động
+  const { startRecording, stopRecording } = useAudioStreaming(client, activeChannelId, myAudioId);
+  
   React.useEffect(() => {
     if (status === 'TALKING') {
       startRecording();
     } else {
-      // Nếu trạng thái là IDLE, LOCKED, hoặc REQUESTING thì đều dừng ghi âm
       stopRecording();
     }
-  }, [status]); // useEffect sẽ tự trigger lại mỗi khi biến 'status' đổi màu
-/*
+  }, [status]); 
+
+  // LOGIC NHẬN VÀ PHÁT AUDIO (ĐÃ SỬA LỖI MOBILE VÀ MEMORY LEAK)
   React.useEffect(() => {
-    async function connectAndFetch() {
-      setConnectionStatus('connecting');
-      setError(null);
-      try {
-        // Ping the device instead of login
-        await api.ping();
-        setConnectionStatus('connected');
-        // Fetch device status
-        await api.login("skytrac", "skytrac");
-        const status = await api.getDiagnosticsStatus();
-        setDeviceStatus(status);
-      } catch (e) {
-        setConnectionStatus('error');
-        setError(e.message || 'Connection failed');
-      }
-    }
-    connectAndFetch();
-  }, []);
-*/
-  // LOGIC NHẬN VÀ PHÁT AUDIO TỪ BẠN BÈ
-  React.useEffect(() => {
-    if (!client) return;
+    // Phải đảm bảo thẻ audio trên giao diện đã load xong
+    if (!client || !audioPlayerRef.current) return;
 
     const audioTopic = `skytrac/audio/${activeChannelId}`;
-    
-    // Đăng ký nghe kênh âm thanh
     client.subscribe(audioTopic);
 
-    // Bắt sự kiện có tin nhắn tới
+    const mediaSource = new MediaSource();
+    const audioEl = audioPlayerRef.current; // Sử dụng thẻ thực tế thay vì new Audio()
+    
+    // Tạo URL và gắn vào thẻ
+    const objectUrl = URL.createObjectURL(mediaSource);
+    audioEl.src = objectUrl;
+
+    let sourceBuffer = null;
+    let chunkQueue = []; 
+
+    mediaSource.addEventListener('sourceopen', () => {
+      sourceBuffer = mediaSource.addSourceBuffer('audio/webm; codecs="opus"');
+
+      sourceBuffer.addEventListener('updateend', () => {
+        if (chunkQueue.length > 0 && !sourceBuffer.updating) {
+          sourceBuffer.appendBuffer(chunkQueue.shift());
+          if (audioEl.paused) audioEl.play().catch(e => console.warn("Trình duyệt chặn phát:", e));
+        }
+      });
+    });
+
     const handleMessage = (topic, message) => {
       if (topic === audioTopic) {
-        // Biến message của MQTT lúc này đang là mảng byte (Buffer)
-        // Bọc nó lại thành định dạng WebM Opus
-        const audioBlob = new Blob([message], { type: 'audio/webm;codecs=opus' });
+        const rawData = new Uint8Array(message);
+        const senderId = rawData[0];
         
-        // Tạo URL ảo và phát luôn
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        
-        audio.play().catch(e => console.error("Lỗi phát âm thanh:", e));
+        if (senderId === myAudioId) return; 
+
+        const chunk = rawData.slice(1);
+
+        if (sourceBuffer && !sourceBuffer.updating) {
+          try {
+            sourceBuffer.appendBuffer(chunk);
+            if (audioEl.paused) audioEl.play().catch(e => console.warn("Chờ tương tác chạm:", e));
+          } catch(e) {
+            console.error("Lỗi ghép chunk:", e);
+          }
+        } else {
+          chunkQueue.push(chunk);
+        }
       }
     };
 
     client.on('message', handleMessage);
-    // Cleanup khi đổi kênh
+
     return () => {
       client.unsubscribe(audioTopic);
       client.removeListener('message', handleMessage);
+      
+      // 2. Dọn dẹp rác bộ nhớ khi đổi kênh
+      URL.revokeObjectURL(objectUrl);
+      audioEl.src = '';
     };
   }, [client, activeChannelId]);
-
+  
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-blue-100 to-purple-200 flex flex-col justify-end items-center">
-      {/* Header row: sat icon, title, hamburger */}
+      
+      {/* 3. Thẻ Audio vật lý ẩn trên giao diện (Vượt rào Mobile) */}
+      <audio ref={audioPlayerRef} autoPlay playsInline style={{ display: 'none' }} />
+
+      {/* Header row ... (Giữ nguyên code của bạn) */}
       <div className="w-full flex items-center justify-between px-4 pt-2">
-        {/* Satellite status icon */}
         <div className="flex-shrink-0">
           <img
             src={connectionStatus === 'connected' ? '/green-sat.png' : '/red-sat.png'}
@@ -99,9 +115,7 @@ function App() {
             className="w-14 h-14 drop-shadow"
           />
         </div>
-        {/* Centered title */}
         <h1 className="text-4xl font-bold drop-shadow-lg text-center flex-1">Talkio</h1>
-        {/* Hamburger menu */}
         <div className="flex-shrink-0">
           <button
             onClick={() => setDrawerOpen(true)}
@@ -115,25 +129,16 @@ function App() {
       </div>
 
       <div className="flex-1 w-full flex flex-col items-center mt-5">
-
-        {/* Connection status */}
         <div className="mt-4">
-          {connectionStatus === 'connecting' && (
-            <span className="text-blue-600">Status: Connecting...</span>
-          )}
-          {connectionStatus === 'connected' && (
-            <span className="text-green-600">Status: Connected</span>
-          )}
-          {connectionStatus === 'error' && (
-            <span className="text-red-600">Status: Disconnected</span>
-          )}
+          {connectionStatus === 'connecting' && <span className="text-blue-600">Status: Connecting...</span>}
+          {connectionStatus === 'connected' && <span className="text-green-600">Status: Connected</span>}
+          {connectionStatus === 'error' && <span className="text-red-600">Status: Disconnected</span>}
         </div>
 
         <p className="text-sm text-black/60">
           <span className="font-semibold">{activeChannel?.name}</span>
         </p>
 
-        {/* Device status */}
         {connectionStatus === 'connected' && deviceStatus && (
           <div className="mt-4 p-4 bg-white/80 rounded shadow text-black">
             <div><b>Temperature:</b> {deviceStatus.temperature}°C</div>
@@ -147,11 +152,9 @@ function App() {
       
       <div className="w-full flex flex-col items-center gap-6 pb-12">
         <LiveWaveform running={status === 'TALKING'} />
-
         <TalkButton status={status} onPress={requestMic} onRelease={releaseMic} />
       </div>
 
-      {/* Extend Window */}
       <ExtendWindow
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
@@ -160,11 +163,11 @@ function App() {
         onSelectChannel={(id) => {
           setActiveChannelId(id);
           setDrawerOpen(false);
-          setWaveformRunning(false);
+          // Đã xóa setWaveformRunning(false) ở đây
         }}
       />
     </div>
   );
 }
 
-export default App
+export default App;
