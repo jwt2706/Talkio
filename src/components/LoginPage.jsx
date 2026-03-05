@@ -26,7 +26,7 @@ export default function LoginPage({ open, onLogin, paired }) {
       const user = await api.userLogin(email.trim().toLowerCase(), password);
       onLogin?.(user);
     } catch (err) {
-      setError(err.message || "Login failed");
+      setError(err.message || "Login failed (msg from handleLogin page)");
     } finally {
       setLoading(false);
     }
