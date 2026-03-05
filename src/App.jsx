@@ -20,6 +20,7 @@ const CHANNELS = [
 function App() {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [activeChannelId, setActiveChannelId] = React.useState(CHANNELS[0].id);
+
   const [connectionStatus, setConnectionStatus] = React.useState("connecting"); // connecting | connected | error
   const [deviceStatus, setDeviceStatus] = React.useState(null);
   const [error, setError] = React.useState(null);
@@ -37,6 +38,28 @@ function App() {
     { id: "u1", email: "user@uottawa.ca" },
   ]);
 
+  // Connect to Skylink on mount with default creds
+  React.useEffect(() => {
+    let cancelled = false;
+    async function connect() {
+      setConnectionStatus('connecting');
+      setError(null);
+      try {
+        await api.login('skytrac', 'skytrac');
+        if (cancelled) return;
+        setConnectionStatus('connected');
+      } catch (e) {
+        if (cancelled) return;
+        setConnectionStatus('error');
+        setError('Failed to pair: ' + (e.message || e.toString()));
+      }
+    }
+    connect();
+    return () => { cancelled = true; };
+  }, []);
+
+  // 1. Tạo Ref để móc vào thẻ audio vật lý trên giao diện
+  const audioPlayerRef = useRef(null);
   const [memberships, setMemberships] = React.useState({});
   const audioPlayerRef = useRef(null);
   const activeChannel = CHANNELS.find((c) => c.id === activeChannelId);
@@ -182,7 +205,7 @@ function App() {
             <span className="text-blue-600">Status: Connecting...</span>
           )}
           {connectionStatus === "connected" && (
-            <span className="text-green-600">Status: Connected</span>
+            <span className="text-green-600">Status: Paired</span>
           )}
           {connectionStatus === "error" && (
             <span className="text-red-600">Status: Disconnected</span>
