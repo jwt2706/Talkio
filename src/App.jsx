@@ -59,7 +59,6 @@ function App() {
   }, []);
 
   // 1. Tạo Ref để móc vào thẻ audio vật lý trên giao diện
-  const audioPlayerRef = useRef(null);
   const [memberships, setMemberships] = React.useState({});
   const audioPlayerRef = useRef(null);
   const activeChannel = CHANNELS.find((c) => c.id === activeChannelId);
