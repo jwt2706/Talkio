@@ -493,6 +493,7 @@ async function deleteUser(username) {
 }
 
 export default {
+  setApiBase,
   ping,
   login,
   setJwt,

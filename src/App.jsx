@@ -37,7 +37,7 @@ function App() {
   const [adminOpen, setAdminOpen] = React.useState(false);
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [currentUser, setCurrentUser] = React.useState(null);
-  const handleLogin = (user) => {
+  const handleAdminLogin = (user) => {
     setCurrentUser(user);
     setIsLoggedIn(true);
   };
@@ -356,51 +356,20 @@ function App() {
               )}
             </div>
 
-        {/* Optional error */}
-        {connectionStatus === "error" && error && (
-          <p className="mt-3 text-sm text-red-700">{error}</p>
-        )}
-      </div>
-
-      <div className="w-full flex flex-col items-center gap-6 pb-12">
-        <LiveWaveform running={status === "TALKING"} />
-        <TalkButton status={status} onPress={requestMic} onRelease={releaseMic} />
-      </div>
-    <LoginPage open={!isLoggedIn} onLogin={handleLogin} />
-            <p className="text-sm text-black/60">
-              <span className="font-semibold">{activeChannel?.name}</span>
-            </p>
-
-            {/* Device status */}
-            {connectionStatus === "connected" && deviceStatus && (
-              <div className="mt-4 p-4 bg-white/80 rounded shadow text-black">
-                <div>
-                  <b>Temperature:</b> {deviceStatus.temperature}°C
-                </div>
-                <div>
-                  <b>Uptime:</b> {deviceStatus.uptime} s
-                </div>
-                <div>
-                  <b>CPU Usage:</b> {deviceStatus.cpuUsage}%
-                </div>
-                <div>
-                  <b>Memory Usage:</b> {deviceStatus.memoryUsage}%
-                </div>
-                <div>
-                  <b>Storage Usage:</b> {deviceStatus.storageUsage}%
-                </div>
-              </div>
-            )}
-
             {/* Optional error */}
             {connectionStatus === "error" && error && (
               <p className="mt-3 text-sm text-red-700">{error}</p>
             )}
           </div>
+
           <div className="w-full flex flex-col items-center gap-6 pb-12">
-            <LiveWaveform running={status === 'TALKING'} />
+            <LiveWaveform running={status === "TALKING"} />
             <TalkButton status={status} onPress={requestMic} onRelease={releaseMic} />
           </div>
+          <LoginPage open={!isLoggedIn} onLogin={handleAdminLogin} />
+          <p className="text-sm text-black/60">
+            <span className="font-semibold">{activeChannel?.name}</span>
+          </p>
         </>
       )}
 
