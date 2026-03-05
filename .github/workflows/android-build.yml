@@ -38,20 +38,6 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
-      - name: Allow cleartext traffic in AndroidManifest.xml
-        run: |
-          sed -i '/<application / s|>| android:usesCleartextTraffic="true" android:networkSecurityConfig="@xml/network_security_config">|' android/app/src/main/AndroidManifest.xml
-
-      - name: Add network_security_config.xml
-        run: |
-          mkdir -p android/app/src/main/res/xml
-          cat <<EOF > android/app/src/main/res/xml/network_security_config.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <network-security-config>
-            <base-config cleartextTrafficPermitted="true" />
-          </network-security-config>
-          EOF
-
       - name: Copy web assets
         run: npx cap copy android
 
@@ -59,7 +45,6 @@ jobs:
         run: |
           cd android
           ./gradlew assembleDebug
-
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
