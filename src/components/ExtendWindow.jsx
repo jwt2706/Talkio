@@ -1,5 +1,5 @@
 import React from "react";
-import { Settings } from "lucide-react";
+import { FiSettings } from "react-icons/fi";
 
 export default function ChannelDrawer({
   open,
@@ -42,7 +42,7 @@ export default function ChannelDrawer({
               aria-label="Open Admin Portal"
               className="rounded-xl border border-black/30 bg-black/20 px-3 py-2 hover:bg-black/30 text-white"
             >
-              <Settings size={18} />
+              <FiSettings className="w-6 h-6 text-white" />
             </button>
 
             <button

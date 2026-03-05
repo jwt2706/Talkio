@@ -20,40 +20,27 @@ const CHANNELS = [
 function App() {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [activeChannelId, setActiveChannelId] = React.useState(CHANNELS[0].id);
-  const [connectionStatus, setConnectionStatus] = React.useState("connecting");
+  const [connectionStatus, setConnectionStatus] = React.useState("connecting"); // connecting | connected | error
   const [deviceStatus, setDeviceStatus] = React.useState(null);
   const [error, setError] = React.useState(null);
 
   // Admin portal open/close
   const [adminOpen, setAdminOpen] = React.useState(false);
-
-  const [activeChannelId, setActiveChannelId] = React.useState(
-    INITIAL_CHANNELS[0].id
-  );
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [currentUser, setCurrentUser] = React.useState(null);
   const handleLogin = (user) => {
     setCurrentUser(user);
     setIsLoggedIn(true);
   };
-  
-  const [connectionStatus, setConnectionStatus] = React.useState("connecting"); // connecting | connected | error
-  const [deviceStatus, setDeviceStatus] = React.useState(null);
-  const [error, setError] = React.useState(null);
   // Users are created by email (portal manages these)
   const [users, setUsers] = React.useState([
     { id: "u1", email: "user@uottawa.ca" },
   ]);
 
-  // memberships = { [channelId]: [userId, ...] }
   const [memberships, setMemberships] = React.useState({});
-
-  // 1. Tạo Ref để móc vào thẻ audio vật lý trên giao diện
   const audioPlayerRef = useRef(null);
-
   const activeChannel = CHANNELS.find((c) => c.id === activeChannelId);
   const myAudioId = React.useMemo(() => Math.floor(Math.random() * 256), []);
-
   const { status, requestMic, releaseMic, client } = useFloorControl(activeChannelId);
   const { startRecording, stopRecording } = useAudioStreaming(client, activeChannelId, myAudioId);
 
@@ -237,7 +224,7 @@ function App() {
         <LiveWaveform running={status === "TALKING"} />
         <TalkButton status={status} onPress={requestMic} onRelease={releaseMic} />
       </div>
-<LoginPage open={!isLoggedIn} onLogin={handleLogin} />
+    <LoginPage open={!isLoggedIn} onLogin={handleLogin} />
       <ExtendWindow
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
