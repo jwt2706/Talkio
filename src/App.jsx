@@ -389,6 +389,7 @@ function App() {
           setDrawerOpen(false);
         }}
         onOpenAdmin={() => setAdminOpen(true)}
+        onLogout={handleLogout}
       />
 
       {/* ✅ Admin Portal overlay inside the app */}

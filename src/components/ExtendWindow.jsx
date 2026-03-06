@@ -8,6 +8,7 @@ export default function ChannelDrawer({
   activeChannelId,
   onSelectChannel,
   onOpenAdmin,
+  onLogout,
 }) {
   return (
     <>
@@ -48,7 +49,7 @@ export default function ChannelDrawer({
           </div>
         </div>
 
-        <div className="p-4 flex flex-col h-[calc(100%-64px)]">
+        <div className="p-4 flex flex-col h-[calc(100%-64px)] relative">
           <p className="text-sm text-white/70 mb-3">
             Select a channel to join/switch.
           </p>
@@ -85,6 +86,15 @@ export default function ChannelDrawer({
               );
             })}
           </div>
+        </div>
+        {/* Logout button pinned to bottom */}
+        <div className="absolute left-0 bottom-0 w-full p-4 bg-gradient-to-t from-[#3E4553] via-[#3E4553]/90 to-transparent">
+          <button
+            onClick={() => onLogout?.()}
+            className="w-full rounded-xl border border-black/30 bg-[#445876] text-white shadow-md px-4 py-2 transition"
+          >
+            Log out
+          </button>
         </div>
       </aside>
     </>

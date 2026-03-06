@@ -18,6 +18,11 @@ export default async function handler(req, res) {
   const user = getUserFromToken(req);
   if (!user) return res.status(401).json({ error: 'Missing or invalid token' });
 
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
   if (req.method === 'POST' && req.url.endsWith('/add')) {
     const { userUuid } = req.body;
     const room = await Room.findOne({ roomUuid: req.query.roomUuid });
