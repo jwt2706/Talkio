@@ -1,6 +1,6 @@
 // --- BACKEND APIS ---
 
-let API_BASE = 'http://localhost:4000/api';
+let API_BASE = 'http://talkio-rose.vercel.app/api';
 export function setApiBase(url) {
   API_BASE = url;
 }
