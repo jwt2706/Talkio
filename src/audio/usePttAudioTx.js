@@ -47,8 +47,8 @@ export function usePttAudioTx({ mqttClient, channelId, talking, ssrc }) {
       audioCtxRef.current = null;
 
       prevOpusRef.current = null;
-      seqRef.current = 0;
-      tsRef.current = 0;
+      //seqRef.current = 0;
+      //tsRef.current = 0;
     }
 
     async function start() {

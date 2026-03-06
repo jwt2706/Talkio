@@ -118,6 +118,12 @@ export function usePttAudioRx({ mqttClient, channelId, mySsrc = null }) {
           if (!workerReadyRef.current) return;
 
           for (const [ssrc, jb] of jbMapRef.current.entries()) {
+            const now = Date.now();
+            if ((jb.lastPushAt && now - jb.lastPushAt > 3000)) {
+              console.log("[RX] removing stale jitter buffer", ssrc >>> 0);
+              jbMapRef.current.delete(ssrc);
+              continue;
+            }
             const res = jb.popNext();
             console.log("[RX] jitter result", {
               ssrc,
@@ -130,6 +136,7 @@ export function usePttAudioRx({ mqttClient, channelId, mySsrc = null }) {
             }
 
             if (res.kind === "PKT") {
+              console.log("[RX] REAL packet decode", res.pkt.seq);
               // console.log("[RX] decode packet from", ssrc, "seq=", res.pkt.seq);
               workerRef.current?.postMessage(
                 {
@@ -160,6 +167,11 @@ export function usePttAudioRx({ mqttClient, channelId, mySsrc = null }) {
 
           const raw = new Uint8Array(payload);
           const pkt = unpackPacket(raw);
+          console.log("[RX] parsed packet", { 
+            ssrc: pkt.ssrc >>> 0,
+            seq: pkt.seq,
+            ts: pkt.tsSamples,
+          });
 
           if (!pkt) {
             console.error("[RX] unpackPacket FAILED", {
@@ -198,6 +210,17 @@ export function usePttAudioRx({ mqttClient, channelId, mySsrc = null }) {
             });
             jbMapRef.current.set(pkt.ssrc, jb);
           }
+          if (
+            jb.expectedTs !== null &&
+            ((pkt.tsSamples - jb.expectedTs) >>> 0) > 0x80000000
+          ) {
+            console.warn("[RX] timestamp went backwards, resetting jitter buffer", {
+              ssrc: pkt.ssrc >>> 0,
+              pktTs: pkt.tsSamples,
+              expectedTs: jb.expectedTs,
+            });
+            jb.reset();
+          }
 
           jb.push(pkt);
           console.log("[RX] pushed to jitter", {
@@ -205,6 +228,7 @@ export function usePttAudioRx({ mqttClient, channelId, mySsrc = null }) {
             seq: pkt.seq,
             mapSize: jb.map?.size,
           });
+          jb.lastPushAt = Date.now();
         };
 
         mqttClient.on("message", onMessage);

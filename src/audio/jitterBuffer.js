@@ -1,7 +1,7 @@
 export class JitterBuffer {
   constructor({
     frameMs = 20,
-    targetMs = 120,
+    targetMs = 60,
     maxMs = 220,
     dropLateMs = 1000,
   } = {}) {
@@ -13,39 +13,42 @@ export class JitterBuffer {
     this.map = new Map(); // tsSamples -> packet
     this.baseTs = null;
     this.expectedTs = null;
-    this.frameSamples = 320; // will be set from first packet
+    this.frameSamples = 320;
+    this.missCount = 0;
   }
 
   reset() {
     this.map.clear();
     this.baseTs = null;
     this.expectedTs = null;
+    this.missCount = 0;
   }
 
   push(pkt) {
     const now = Date.now() >>> 0;
-    const age = (now - pkt.sendTimeMs) >>> 0;
+    const age = (now - (pkt.sendTimeMs >>> 0)) >>> 0;
 
-    // Drop too late => never "listen to the past"
+    // Optional late drop
     if (age > this.dropLateMs) return;
 
     this.frameSamples = pkt.frameSamples || this.frameSamples;
-    this.map.set(pkt.tsSamples, pkt);
 
-    // Anti-backlog: keep only up to max window
-    if (this.baseTs !== null) {
-      const maxFrames = Math.round(this.maxMs / this.frameMs);
-      const maxWindowSamples = maxFrames * this.frameSamples;
+    // Insert packet
+    this.map.set(pkt.tsSamples >>> 0, pkt);
 
-      for (const ts of this.map.keys()) {
-        const diff = (ts - this.baseTs) >>> 0;
-        if (diff > maxWindowSamples) this.map.delete(ts);
+    // Keep map bounded by count, not by baseTs math
+    const maxFrames = Math.max(4, Math.round(this.maxMs / this.frameMs));
+    if (this.map.size > maxFrames) {
+      const sorted = [...this.map.keys()].sort((a, b) => a - b);
+      while (sorted.length > maxFrames) {
+        const oldest = sorted.shift();
+        this.map.delete(oldest);
       }
     }
   }
 
   _enoughToStart() {
-    const needFrames = Math.round(this.targetMs / this.frameMs);
+    const needFrames = Math.max(1, Math.round(this.targetMs / this.frameMs));
     return this.map.size >= needFrames;
   }
 
@@ -53,21 +56,66 @@ export class JitterBuffer {
     if (this.baseTs !== null) return true;
     if (!this._enoughToStart()) return false;
 
-    const sorted = [...this.map.keys()].sort((a, b) => (a - b) | 0);
+    const sorted = [...this.map.keys()].sort((a, b) => a - b);
     this.baseTs = sorted[0];
     this.expectedTs = this.baseTs;
+    this.missCount = 0;
     return true;
   }
 
   popNext() {
-    if (!this._startIfNeeded()) return { kind: "WAIT" };
+    if (!this._startIfNeeded()) {
+      return { kind: "WAIT" };
+    }
 
-    const pkt = this.map.get(this.expectedTs) || null;
-    if (pkt) this.map.delete(this.expectedTs);
+    const expected = this.expectedTs >>> 0;
+    const pkt = this.map.get(expected) || null;
 
-    this.expectedTs = (this.expectedTs + this.frameSamples) >>> 0;
+    if (pkt) {
+      this.map.delete(expected);
+      this.expectedTs = (expected + this.frameSamples) >>> 0;
+      this.missCount = 0;
+      return { kind: "PKT", pkt };
+    }
 
-    if (pkt) return { kind: "PKT", pkt };
-    return { kind: "PLC" }; // missing => ask decoder PLC
+    const sorted = [...this.map.keys()].sort((a, b) => a - b);
+
+    // ✅ Nếu buffer trống hẳn thì đừng PLC mãi
+    if (sorted.length === 0) {
+      this.missCount += 1;
+
+      // chỉ PLC tối đa vài frame ngắn rồi chuyển về WAIT
+      if (this.missCount <= 2) {
+        this.expectedTs = (expected + this.frameSamples) >>> 0;
+        return { kind: "PLC" };
+      }
+
+      // coi như talkspurt kết thúc / hết dữ liệu
+      this.baseTs = null;
+      this.expectedTs = null;
+      this.missCount = 0;
+      return { kind: "WAIT" };
+    }
+
+    const earliest = sorted[0] >>> 0;
+    const gap = ((earliest - expected) >>> 0);
+
+    // ✅ Nếu lệch nhiều hoặc miss liên tiếp, resync sang packet thật
+    if (gap > this.frameSamples * 2 || this.missCount >= 2) {
+      this.expectedTs = earliest;
+      this.missCount = 0;
+
+      const pkt2 = this.map.get(earliest);
+      if (pkt2) {
+        this.map.delete(earliest);
+        this.expectedTs = (earliest + this.frameSamples) >>> 0;
+        return { kind: "PKT", pkt: pkt2 };
+      }
+    }
+
+    // ✅ chỉ PLC cho khoảng mất gói ngắn
+    this.expectedTs = (expected + this.frameSamples) >>> 0;
+    this.missCount += 1;
+    return { kind: "PLC" };
   }
 }
