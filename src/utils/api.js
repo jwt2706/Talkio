@@ -1,9 +1,16 @@
-// --- BACKEND APIS ---
+// URLS
 
-let API_BASE = 'http://talkio-rose.vercel.app/api';
+let API_BASE = 'https://talkio-rose.vercel.app/api';
 export function setApiBase(url) {
   API_BASE = url;
 }
+
+let SKYTRAC_API_BASE = 'http://192.168.111.1:3000';
+export function setSkytracApiBase(url) {
+  SKYTRAC_API_BASE = url;
+}
+
+// --- BACKEND APIS ---
 
 export async function register(email, password) {
   const res = await fetch(`${API_BASE}/auth/register`, {
@@ -56,12 +63,6 @@ export async function addUserToRoom(roomUuid, userUuid) {
 }
 
 // --- SKYTRAC APIS ---
-
-let SKYTRAC_API_BASE = 'http://192.168.111.1:3000';
-export function setSkytracApiBase(url) {
-  SKYTRAC_API_BASE = url;
-}
-
 
 // JWT persistence
 let jwt = null;
