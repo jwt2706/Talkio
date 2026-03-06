@@ -5,7 +5,7 @@ export function setApiBase(url) {
   API_BASE = url;
 }
 
-let SKYTRAC_API_BASE = 'http://192.168.111.1:3000';
+let SKYTRAC_API_BASE = 'https://192.168.111.1:3000';
 export function setSkytracApiBase(url) {
   SKYTRAC_API_BASE = url;
 }
