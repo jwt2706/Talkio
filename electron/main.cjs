@@ -1,4 +1,3 @@
-// main.cjs - Electron main process
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const mqtt = require("mqtt");
@@ -10,8 +9,8 @@ let mqttConnected = false;
 // topic -> refCount
 const topicRefCounts = new Map();
 
-// ✅ Change this in ONE place later if needed
-const MQTT_URL = "mqtt://159.203.3.86:1883";
+// START with mqtt:// ... later we can upgrade to mqtts://
+const MQTT_URL = "mqtt://talk-io.app:1883";
 
 function sendToRenderer(channel, payload) {
   if (win && !win.isDestroyed()) {
@@ -23,9 +22,12 @@ function ensureMqttClient() {
   if (mqttClient) return mqttClient;
 
   mqttClient = mqtt.connect(MQTT_URL, {
+    username: "user1",
+    password: "112233",
     reconnectPeriod: 3000,
-    connectTimeout: 10000,
+    connectTimeout: 20000,
     clean: true,
+    keepalive: 30,
     clientId: `talkio_main_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
   });
 
@@ -34,7 +36,6 @@ function ensureMqttClient() {
     console.log("[MAIN MQTT] connected:", MQTT_URL);
     sendToRenderer("mqtt:event", { type: "connect" });
 
-    // re-subscribe any active topics after reconnect
     for (const topic of topicRefCounts.keys()) {
       mqttClient.subscribe(topic, { qos: 0 }, (err) => {
         if (err) {
@@ -43,9 +44,9 @@ function ensureMqttClient() {
             type: "error",
             error: `resubscribe failed for ${topic}: ${err.message || err}`,
           });
-          return;
+        } else {
+          console.log("[MAIN MQTT] resubscribed:", topic);
         }
-        console.log("[MAIN MQTT] resubscribed:", topic);
       });
     }
   });
@@ -84,12 +85,8 @@ function ensureMqttClient() {
   });
 
   mqttClient.on("message", (topic, payload) => {
-    // payload is Buffer; send Uint8Array to renderer
     const bytes = Uint8Array.from(payload);
-    sendToRenderer("mqtt:message", {
-      topic,
-      payload: bytes,
-    });
+    sendToRenderer("mqtt:message", { topic, payload: bytes });
   });
 
   return mqttClient;
@@ -112,22 +109,22 @@ function createWindow() {
   } else {
     win.loadFile(path.join(__dirname, "../dist/index.html"));
   }
+
   win.webContents.on("did-finish-load", () => {
     console.log("[MAIN] window loaded");
   });
 }
 
-// ---------- IPC: MQTT ----------
+// ---- IPC handlers ----
 
 ipcMain.handle("mqtt:connect", async () => {
-  const client = ensureMqttClient();
+  ensureMqttClient();
 
   if (mqttConnected) {
     return { ok: true, connected: true };
   }
 
-  // wait briefly for connect
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await new Promise((resolve) => setTimeout(resolve, 500));
   return { ok: true, connected: mqttConnected };
 });
 
@@ -174,7 +171,6 @@ ipcMain.handle("mqtt:subscribe", async (_event, args) => {
   const prev = topicRefCounts.get(topic) || 0;
   topicRefCounts.set(topic, prev + 1);
 
-  // only subscribe on broker once for first consumer
   if (prev > 0) {
     return { ok: true, reused: true };
   }
@@ -200,6 +196,7 @@ ipcMain.handle("mqtt:unsubscribe", async (_event, args) => {
   }
 
   const prev = topicRefCounts.get(topic) || 0;
+
   if (prev <= 1) {
     topicRefCounts.delete(topic);
 
@@ -217,8 +214,6 @@ ipcMain.handle("mqtt:unsubscribe", async (_event, args) => {
   topicRefCounts.set(topic, prev - 1);
   return { ok: true, decremented: true };
 });
-
-// ---------- App lifecycle ----------
 
 app.whenReady().then(createWindow);
 

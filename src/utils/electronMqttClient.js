@@ -1,5 +1,3 @@
-// src/utils/electronMqttClient.js
-
 class ElectronMqttBridgeClient {
   constructor() {
     this._connected = false;
@@ -28,13 +26,11 @@ class ElectronMqttBridgeClient {
     if (!this._started) {
       this._started = true;
 
-      // initial state
       try {
         const state = await window.mqttAPI.getState();
         this._connected = !!state?.connected;
       } catch {}
 
-      // subscribe once to events from main
       window.mqttAPI.onEvent((evt) => {
         const type = evt?.type;
         if (!type) return;
@@ -123,7 +119,7 @@ class ElectronMqttBridgeClient {
   }
 
   end() {
-    // no-op on renderer bridge
+    // no-op in renderer bridge
   }
 
   _emit(event, ...args) {
@@ -142,8 +138,6 @@ class ElectronMqttBridgeClient {
 let singleton = null;
 
 export function getElectronMqttClient() {
-  if (!singleton) {
-    singleton = new ElectronMqttBridgeClient();
-  }
+  if (!singleton) singleton = new ElectronMqttBridgeClient();
   return singleton;
 }

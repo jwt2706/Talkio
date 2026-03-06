@@ -188,7 +188,7 @@ export default function useFloorControl(activeChannelId) {
     status,
     requestMic,
     releaseMic,
-    client: clientRef.current, // ✅ audio hooks can keep using this
+    client: clientRef.current,
     isConnected,
   };
 }

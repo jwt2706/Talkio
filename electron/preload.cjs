@@ -1,6 +1,6 @@
-// preload.cjs - Electron preload script
-console.log("[PRELOAD] loaded");
 const { contextBridge, ipcRenderer } = require("electron");
+
+console.log("[PRELOAD] loaded");
 
 contextBridge.exposeInMainWorld("mqttAPI", {
   connect: () => ipcRenderer.invoke("mqtt:connect"),
