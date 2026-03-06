@@ -11,7 +11,7 @@ export default function useFloorControl(activeChannelId) {
 
   useEffect(() => {
     // 1. Khởi tạo kết nối WebSocket tới server DigitalOcean
-    const client = mqtt.connect('wss://159.203.3.86:9001');
+    const client = mqtt.connect('ws://159.203.3.86:9001');
     clientRef.current = client;
 
     const topic = `skytrac/talkgroup/${activeChannelId}`;
