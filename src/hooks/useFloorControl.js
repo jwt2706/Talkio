@@ -2,11 +2,10 @@
 import { useState, useEffect, useRef } from 'react';
 import mqtt from 'mqtt';
 
-export default function useFloorControl(activeChannelId) {
+
+export default function useFloorControl(activeChannelId, shouldConnect) {
   const [status, setStatus] = useState('IDLE'); // IDLE, REQUESTING, TALKING, LOCKED
   const clientRef = useRef(null);
-  
-  // Tạo một ID định danh tạm thời cho thiết bị này để không tự khóa chính mình
   const myClientId = useRef(`device_${Math.random().toString(36).substring(2, 9)}`).current;
 
   useEffect(() => {
@@ -30,13 +29,11 @@ export default function useFloorControl(activeChannelId) {
       keepalive: 30,
     });
     clientRef.current = client;
-
     const topic = `skytrac/talkgroup/${activeChannelId}`;
 
     client.on('connect', () => {
       console.log(`Connected securely to MQTT. Subscribing to ${topic}`);
       client.subscribe(topic);
-      // Khi vừa đổi kênh, reset trạng thái về IDLE
       setStatus('IDLE'); 
     });
 
@@ -51,15 +48,11 @@ export default function useFloorControl(activeChannelId) {
 
       try {
         const payload = JSON.parse(message.toString());
-        
-        // Bỏ qua tin nhắn do chính mình gửi
         if (payload.clientId === myClientId) return;
 
         if (payload.action === 'mic_taken') {
-          // Có người khác lấy mic -> Khóa nút
           setStatus(prev => prev === 'TALKING' ? 'TALKING' : 'LOCKED');
         } else if (payload.action === 'mic_freed') {
-          // Người kia nhả mic -> Mở khóa
           setStatus('IDLE');
         }
       } catch (err) {
@@ -77,7 +70,6 @@ export default function useFloorControl(activeChannelId) {
   // 5. Các hàm thao tác với Mic
   const requestMic = () => {
     if (status === 'LOCKED') return;
-    
     setStatus('REQUESTING');
     
     const payload = JSON.stringify({ clientId: myClientId, action: 'mic_taken' });
@@ -90,7 +82,6 @@ export default function useFloorControl(activeChannelId) {
 
   const releaseMic = () => {
     if (status !== 'TALKING') return;
-    
     setStatus('IDLE');
     
     const payload = JSON.stringify({ clientId: myClientId, action: 'mic_freed' });
